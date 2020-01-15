@@ -8,10 +8,12 @@ public class BeybladeMovement : MonoBehaviour
     public GameObject playerObject;
     public GameObject lightningPrefab;
 
-    public float moveSpeed = 1f;
     public float attackDmg = 5;
-    public float currentPower = 5;
+    public float bonusDmg = 10;
+    public float currentPower = 15;
     public float health = 2000;
+
+    public float rotationX, rotationY, rotationZ;
 
     public float xAngle = 0f;
     public float yAngle = 10.0f;
@@ -21,11 +23,19 @@ public class BeybladeMovement : MonoBehaviour
     public float yConForce = -5;
     public float zConForce;
 
-    public float conForceMax = 125;
-    public float conForceMin = -125;
+    public float conForceMax = 225;
+    public float conForceMin = -225;
 
     // Update is called once per frame
     void Update()
+    {
+        checkHealth();
+        setAttackPower();
+        checkTilt();
+        randomMovement();
+    }
+
+    void checkHealth()
     {
         if (health <= 0)
         {
@@ -36,22 +46,36 @@ public class BeybladeMovement : MonoBehaviour
             // destroy beyblade
             Destroy(playerObject, 1); // not: Destroy(this, 1); which deletes BeybladeMovement script
         }
+    }
 
-        setAttackPower();
+    void checkTilt()
+    {
+        rotationX = transform.localEulerAngles.x;
+        rotationY = transform.localEulerAngles.y;
+        rotationZ = transform.localEulerAngles.z;
 
+        if (rotationX > 60.0f)
+        {
+            rotationX = 60.0f;
+        }
+
+        else if (rotationX < -60.0f)
+        {
+            rotationX = -60.0f;
+        }
+
+        transform.localEulerAngles = new Vector3(0, rotationY, rotationZ);
+    }
+
+    void randomMovement()
+    {
         xConForce = Random.Range(conForceMin, conForceMax);
         zConForce = Random.Range(conForceMin, conForceMax);
 
-        transform.Translate(Vector3.forward * moveSpeed * Time.deltaTime);
+        transform.Translate(Vector3.forward * Time.deltaTime);
         transform.Rotate(xAngle, yAngle, xAngle, Space.Self);
 
         GetComponent<ConstantForce>().force = new Vector3(xConForce, yConForce, zConForce);
-
-        if (conForceMax < 0)
-            conForceMax = 0;
-
-        if (conForceMin > 0)
-            conForceMin = 0;
     }
 
     void OnCollisionEnter(Collision collision)
@@ -66,14 +90,19 @@ public class BeybladeMovement : MonoBehaviour
 
     void OnCollisionStay(Collision collision)
     {
+        if (collision.gameObject.name == "OutOfArena")
+        {
+            health = 0;
+        }
+
         if (collision.gameObject.name == "TopOfArena")
         {
-            attackDmg = 15.0f;
+            attackDmg = 50.0f;
         }
 
         else if (collision.gameObject.name == "MiddleOfArena")
         {
-            attackDmg = 10.0f;
+            attackDmg = 25.0f;
         }
 
         else if (collision.gameObject.name == "BottomOfArena")
@@ -84,7 +113,14 @@ public class BeybladeMovement : MonoBehaviour
 
     void setAttackPower()
     {
-        currentPower = (attackDmg + xConForce + zConForce);
+        if (rotationX > 0)
+            bonusDmg = 60.0f + (rotationX / 30.0f);
+        else if (rotationX < 0)
+            bonusDmg = 60.0f - (rotationX / 30.0f);
+        else
+            bonusDmg = 10.0f;
+
+        currentPower = (attackDmg + bonusDmg);
     }
 
     void takeDamage(float enemyDmg)
